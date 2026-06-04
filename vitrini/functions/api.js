@@ -3,36 +3,38 @@ const { Octokit } = require("@octokit/rest");
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 const OWNER = process.env.REPO_OWNER;
 const REPO = process.env.REPO_NAME;
-const PATH = "vitrini/produtos.json"; // Aponta direto para a pasta interna correta
+const PATH = "vitrini/produtos.json"; 
 
-// Monitoramento estrito das credenciais cadastradas no Netlify
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
 
 async function obterProdutos() {
     try {
         const { data } = await octokit.repos.getContent({ owner: OWNER, repo: REPO, path: PATH });
-        const content = Buffer.from(data.content, 'base64').toString('utf-8');
+        const content = Buffer.from(data.content, 'base64').toString('utf-8').trim();
+        
+        // Se o arquivo existir mas estiver vazio, evita quebrar o JSON.parse
+        if (!content || content === "") {
+            return { produtos: [], sha: data.sha };
+        }
+        
         return { produtos: JSON.parse(content), sha: data.sha };
     } catch (error) {
+        // Se o arquivo não existir ou der erro de leitura, inicia zerado
         return { produtos: [], sha: null };
     }
 }
 
 async function salvarProdutos(produtos, sha) {
     const content = Buffer.from(JSON.stringify(produtos, null, 2)).toString('base64');
-    try {
-        await octokit.repos.createOrUpdateFileContents({
-            owner: OWNER,
-            repo: REPO,
-            path: PATH,
-            message: "🔄 Atualização dinâmica da vitrine TRM Hub",
-            content,
-            sha: sha || undefined
-        });
-    } catch (gitError) {
-        throw new Error(`Erro de comunicação com o GitHub (Status ${gitError.status}): ${gitError.message}`);
-    }
+    await octokit.repos.createOrUpdateFileContents({
+        owner: OWNER,
+        repo: REPO,
+        path: PATH,
+        message: "🔄 Atualização dinâmica da vitrine TRM Hub",
+        content,
+        sha: sha || undefined // Se o arquivo estava com problemas ou novo, cria sem exigir o SHA antigo
+    });
 }
 
 exports.handler = async (event, context) => {
@@ -52,10 +54,8 @@ exports.handler = async (event, context) => {
     const method = event.httpMethod;
 
     try {
-        // Validação de login contra as variáveis de ambiente ativas
         if (endpoint === "login" && method === "POST") {
             const { usuario, senha } = JSON.parse(event.body);
-            
             if (ADMIN_USER && ADMIN_PASS && usuario === ADMIN_USER && senha === ADMIN_PASS) {
                 return { 
                     statusCode: 200, 
@@ -63,13 +63,13 @@ exports.handler = async (event, context) => {
                     body: JSON.stringify({ autenticado: true, token: "trm-authenticated-session-2026" }) 
                 };
             }
-            return { statusCode: 401, headers, body: JSON.stringify({ message: "Usuário ou senha incorretos." }) };
+            return { statusCode: 401, headers, body: JSON.stringify({ message: "Incorreto." }) };
         }
 
         if (method !== "GET") {
             const authHeader = event.headers.authorization;
             if (authHeader !== "trm-authenticated-session-2026") {
-                return { statusCode: 403, headers, body: JSON.stringify({ message: "Acesso não autorizado." }) };
+                return { statusCode: 403, headers, body: JSON.stringify({ message: "Não autorizado." }) };
             }
         }
 
