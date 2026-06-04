@@ -3,10 +3,11 @@ const { Octokit } = require("@octokit/rest");
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 const OWNER = process.env.REPO_OWNER;
 const REPO = process.env.REPO_NAME;
-const PATH = "vitrini/produtos.json"; 
+const PATH = "vitrini/produtos.json"; // Aponta direto para a pasta interna correta
 
-const ADMIN_USER = process.env.ADMIN_USER || "admin";
-const ADMIN_PASS = process.env.ADMIN_PASS || "TRMhub2026";
+// Monitoramento estrito das credenciais cadastradas no Netlify
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_PASS = process.env.ADMIN_PASS;
 
 async function obterProdutos() {
     try {
@@ -14,15 +15,12 @@ async function obterProdutos() {
         const content = Buffer.from(data.content, 'base64').toString('utf-8');
         return { produtos: JSON.parse(content), sha: data.sha };
     } catch (error) {
-        // Se o erro for apenas porque o arquivo está vazio ou não existe, retornamos array vazio para o teste prosseguir
         return { produtos: [], sha: null };
     }
 }
 
 async function salvarProdutos(produtos, sha) {
     const content = Buffer.from(JSON.stringify(produtos, null, 2)).toString('base64');
-    
-    // Tratamento robusto de erro para expor a falha do GitHub no teste
     try {
         await octokit.repos.createOrUpdateFileContents({
             owner: OWNER,
@@ -30,11 +28,10 @@ async function salvarProdutos(produtos, sha) {
             path: PATH,
             message: "🔄 Atualização dinâmica da vitrine TRM Hub",
             content,
-            sha: sha || undefined // Evita quebra caso o arquivo seja novo/nulo
+            sha: sha || undefined
         });
     } catch (gitError) {
-        console.error("Erro detalhado do GitHub detectado:", gitError.status, gitError.message);
-        throw new Error(`[Falha no GitHub - Status ${gitError.status}]: ${gitError.message}`);
+        throw new Error(`Erro de comunicação com o GitHub (Status ${gitError.status}): ${gitError.message}`);
     }
 }
 
@@ -55,22 +52,24 @@ exports.handler = async (event, context) => {
     const method = event.httpMethod;
 
     try {
+        // Validação de login contra as variáveis de ambiente ativas
         if (endpoint === "login" && method === "POST") {
             const { usuario, senha } = JSON.parse(event.body);
-            if (usuario === ADMIN_USER && senha === ADMIN_PASS) {
+            
+            if (ADMIN_USER && ADMIN_PASS && usuario === ADMIN_USER && senha === ADMIN_PASS) {
                 return { 
                     statusCode: 200, 
                     headers, 
                     body: JSON.stringify({ autenticado: true, token: "trm-authenticated-session-2026" }) 
                 };
             }
-            return { statusCode: 401, headers, body: JSON.stringify({ message: "Usuário ou senha inválidos." }) };
+            return { statusCode: 401, headers, body: JSON.stringify({ message: "Usuário ou senha incorretos." }) };
         }
 
         if (method !== "GET") {
             const authHeader = event.headers.authorization;
             if (authHeader !== "trm-authenticated-session-2026") {
-                return { statusCode: 403, headers, body: JSON.stringify({ message: "Não autorizado no cabeçalho." }) };
+                return { statusCode: 403, headers, body: JSON.stringify({ message: "Acesso não autorizado." }) };
             }
         }
 
@@ -81,4 +80,36 @@ exports.handler = async (event, context) => {
         }
 
         if (method === "POST") {
-            const novo =
+            const novo = JSON.parse(event.body);
+            novo.id = Date.now().toString();
+            produtos.push(novo);
+            await salvarProdutos(produtos, sha);
+            return { statusCode: 201, headers, body: JSON.stringify({ message: "Cadastrado!", produto: novo }) };
+        }
+
+        if (method === "PUT" && endpoint) {
+            const atualizado = JSON.parse(event.body);
+            const index = produtos.findIndex(p => p.id === endpoint);
+            if (index === -1) return { statusCode: 404, headers, body: JSON.stringify({ message: "Não encontrado" }) };
+            
+            produtos[index] = { ...produtos[index], ...atualizado };
+            await salvarProdutos(produtos, sha);
+            return { statusCode: 200, headers, body: JSON.stringify({ message: "Atualizado!" }) };
+        }
+
+        if (method === "DELETE" && endpoint) {
+            const filtrados = produtos.filter(p => p.id !== endpoint);
+            await salvarProdutos(filtrados, sha);
+            return { statusCode: 200, headers, body: JSON.stringify({ message: "Removido!" }) };
+        }
+
+        return { statusCode: 405, headers, body: JSON.stringify({ message: "Método inválido" }) };
+
+    } catch (err) {
+        return { 
+            statusCode: 500, 
+            headers, 
+            body: JSON.stringify({ error: "Erro interno", detalhes: err.message }) 
+        };
+    }
+};
