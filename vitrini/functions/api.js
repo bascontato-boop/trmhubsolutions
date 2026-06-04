@@ -3,11 +3,10 @@ const { Octokit } = require("@octokit/rest");
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 const OWNER = process.env.REPO_OWNER;
 const REPO = process.env.REPO_NAME;
-const PATH = "public/produtos.json";
+const PATH = "produtos.json"; // Ajustado para ler da sua raiz
 
-// Usuário e Senha administrativos padrão (Caso não definidos no Netlify)
-const ADMIN_USER = process.env.ADMIN_USER || "thais.ramos";
-const ADMIN_PASS = process.env.ADMIN_PASS || "Trm070790";
+const ADMIN_USER = process.env.ADMIN_USER || "admin";
+const ADMIN_PASS = process.env.ADMIN_PASS || "TRMhub2026";
 
 async function obterProdutos() {
     try {
@@ -48,11 +47,9 @@ exports.handler = async (event, context) => {
     const method = event.httpMethod;
 
     try {
-        // Rota de Autenticação
         if (endpoint === "login" && method === "POST") {
             const { usuario, senha } = JSON.parse(event.body);
             if (usuario === ADMIN_USER && senha === ADMIN_PASS) {
-                // Retorna um token simples simulado para salvar no frontend
                 return { 
                     statusCode: 200, 
                     headers, 
@@ -62,7 +59,6 @@ exports.handler = async (event, context) => {
             return { statusCode: 401, headers, body: JSON.stringify({ message: "Usuário ou senha inválidos." }) };
         }
 
-        // Para qualquer outra operação de modificação (POST, PUT, DELETE), exige cabeçalho de autorização simples
         if (method !== "GET") {
             const authHeader = event.headers.authorization;
             if (authHeader !== "trm-authenticated-session-2026") {
@@ -72,12 +68,10 @@ exports.handler = async (event, context) => {
 
         const { produtos, sha } = await obterProdutos();
 
-        // 1. GET - Listar Produtos
         if (method === "GET") {
             return { statusCode: 200, headers, body: JSON.stringify(produtos) };
         }
 
-        // 2. POST - Criar Produto
         if (method === "POST") {
             const novo = JSON.parse(event.body);
             novo.id = Date.now().toString();
@@ -86,7 +80,6 @@ exports.handler = async (event, context) => {
             return { statusCode: 201, headers, body: JSON.stringify({ message: "Criado com sucesso!", produto: novo }) };
         }
 
-        // 3. PUT - Editar Produto
         if (method === "PUT" && endpoint) {
             const atualizado = JSON.parse(event.body);
             const index = produtos.findIndex(p => p.id === endpoint);
@@ -97,7 +90,6 @@ exports.handler = async (event, context) => {
             return { statusCode: 200, headers, body: JSON.stringify({ message: "Atualizado com sucesso!" }) };
         }
 
-        // 4. DELETE - Remover Produto
         if (method === "DELETE" && endpoint) {
             const filtrados = produtos.filter(p => p.id !== endpoint);
             await salvarProdutos(filtrados, sha);

@@ -12,7 +12,7 @@
         <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
             <h1 class="text-2xl font-bold tracking-wider text-cyan-400">TRM HUB <span class="text-white text-sm font-light block md:inline md:ml-2">Solutions</span></h1>
             <nav>
-                <a href="cadastro.html" class="bg-cyan-600 hover:bg-cyan-500 text-white font-medium px-4 py-2 rounded-lg transition duration-200 text-sm">
+                <a href="vitrini/cadastro.html" class="bg-cyan-600 hover:bg-cyan-500 text-white font-medium px-4 py-2 rounded-lg transition duration-200 text-sm">
                     Painel de Controle
                 </a>
             </nav>
@@ -74,7 +74,7 @@
                 `).join('');
             } catch (error) {
                 console.error('Erro ao buscar produtos:', error);
-                grid.innerHTML = `<div class="col-span-full text-center py-12 text-red-500">Erro ao carregar a vitrine. Verifique se o arquivo JSON existe no repositório.</div>`;
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-red-500">Erro ao carregar a vitrine. Verifique as configurações.</div>`;
             }
         }
     </script>
