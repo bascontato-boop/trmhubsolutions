@@ -3,7 +3,7 @@ const { Octokit } = require("@octokit/rest");
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 const OWNER = process.env.REPO_OWNER;
 const REPO = process.env.REPO_NAME;
-const PATH = "produtos.json"; // Ajustado para ler da sua raiz
+const PATH = "vitrini/produtos.json"; // Ajustado para a pasta correta exibida na imagem image_ee8bae.png
 
 const ADMIN_USER = process.env.ADMIN_USER || "admin";
 const ADMIN_PASS = process.env.ADMIN_PASS || "TRMhub2026";
