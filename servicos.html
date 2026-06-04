@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Serviços | TRM HUB Solutions</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --azul-escuro: #003366; --azul-claro: #0088cc; --cinza-fundo: #f4f7f9; --branco: #ffffff; --texto: #333333; }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, sans-serif; }
+        body { background-color: var(--cinza-fundo); color: var(--texto); line-height: 1.6; }
+        header { background: var(--branco); padding: 1rem 5%; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 1000; }
+        .logo img { height: 60px; }
+        nav a { text-decoration: none; color: var(--azul-escuro); margin-left: 20px; font-weight: 600; }
+        .banner-servicos { background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 51, 102, 0.7)), url('https://images.unsplash.com/photo-1518770660439-4636190af475?q=80&w=1920&auto=format&fit=crop'); background-size: cover; background-position: center; color: white; padding: 80px 5%; text-align: center; }
+        .detalhe-servicos { padding: 60px 5%; display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 40px; }
+        .card-servico { background: var(--branco); padding: 40px; border-radius: 12px; border-left: 5px solid var(--azul-claro); box-shadow: 0 5px 20px rgba(0,0,0,0.05); }
+        .btn-pj { display: inline-flex; align-items: center; gap: 10px; padding: 12px 25px; background-color: #25D366; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; margin-top: 20px; }
+        footer { background: var(--azul-escuro); color: white; padding: 40px 5%; text-align: center; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo"><img src="Logo_nova_whatsapp.jpg" alt="TRM HUB Solutions"></div>
+        <nav><a href="index.html">Home</a><a href="produtos.html">Produtos</a><a href="servicos.html">Serviços</a><a href="sobre.html">Sobre</a></nav>
+    </header>
+    <section class="banner-servicos"><h1>Serviços Especializados</h1><p>Do suporte técnico à gestão estratégica de TI.</p></section>
+    <section class="detalhe-servicos">
+        <div class="card-servico">
+            <h3>Suporte Técnico Tático</h3>
+            <p>Atendimento proativo e ágil para empresas que não podem parar. Monitoramento de infraestrutura e suporte L1, L2 e L3.</p>
+            <a href="https://wa.me/5562984510829" class="btn-pj" target="_blank"><i class="fab fa-whatsapp"></i> Agendar Suporte</a>
+        </div>
+        <div class="card-servico">
+            <h3>Consultoria Estratégica</h3>
+            <p>Redução de custos, conformidade LGPD e design de projetos de alta complexidade com sentimento de dono.</p>
+            <a href="https://wa.me/5562984510829" class="btn-pj" target="_blank"><i class="fab fa-whatsapp"></i> Falar com Consultor</a>
+        </div>
+    </section>
+    <footer><p><strong>TRM HUB Solutions</strong> | comercial@trmhubsolutions.com.br</p></footer>
+</body>
+</html>

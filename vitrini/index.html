@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vitrine de Ofertas - TRM Hub Solutions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 font-sans min-h-screen flex flex-col">
+
+    <header class="bg-slate-900 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold tracking-wider text-cyan-400">TRM HUB <span class="text-white text-sm font-light block md:inline md:ml-2">Solutions</span></h1>
+            <nav>
+                <a href="cadastro.html" class="bg-cyan-600 hover:bg-cyan-500 text-white font-medium px-4 py-2 rounded-lg transition duration-200 text-sm">
+                    Painel de Controle
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <section class="bg-gradient-to-r from-slate-800 to-indigo-950 text-white py-12 text-center px-4">
+        <h2 class="text-3xl md:text-4xl font-extrabold mb-2">As Melhores Ofertas e Recomendações</h2>
+        <p class="text-slate-300 max-w-xl mx-auto text-sm md:text-base">Produtos selecionados com links verificados das melhores plataformas do mercado.</p>
+    </section>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-10">
+        <div id="vitrine-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <div class="col-span-full text-center text-slate-500 py-12" id="loading">Carregando produtos da vitrine...</div>
+        </div>
+    </main>
+
+    <footer class="bg-slate-900 text-slate-400 text-center py-6 text-xs border-t border-slate-800">
+        &copy; 2026 TRM Hub Solutions. Todos os direitos reservados.
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', carregarVitrine);
+
+        async function carregarVitrine() {
+            const grid = document.getElementById('vitrine-grid');
+            try {
+                const response = await fetch('/api');
+                if (!response.ok) throw new Error('Erro na requisição');
+                const produtos = await response.json();
+                
+                if(!produtos || produtos.length === 0) {
+                    grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-500 font-medium">Nenhum produto em destaque no momento.</div>`;
+                    return;
+                }
+
+                grid.innerHTML = produtos.map(produto => `
+                    <div class="bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-100 overflow-hidden flex flex-col justify-between transition duration-200 group">
+                        <div class="relative bg-gray-100 aspect-square w-full overflow-hidden flex items-center justify-center">
+                            <img src="${produto.imagem}" alt="${produto.nome}" class="object-cover w-full h-full group-hover:scale-105 transition duration-300" onerror="this.src='https://placehold.co/400x400?text=Sem+Imagem'">
+                            <span class="absolute top-2 right-2 text-xs font-semibold px-2.5 py-1 rounded-full shadow-sm ${
+                                produto.plataforma.toLowerCase() === 'shopee' ? 'bg-orange-500 text-white' : 'bg-yellow-400 text-slate-900'
+                            }">
+                                ${produto.plataforma}
+                            </span>
+                        </div>
+                        <div class="p-4 flex-grow flex flex-col justify-between">
+                            <div>
+                                <h3 class="font-semibold text-gray-800 text-base line-clamp-2 mb-2 min-h-[3rem]">${produto.nome}</h3>
+                                <div class="text-xl font-bold text-slate-900 mb-4">
+                                    R$ ${parseFloat(produto.preco).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </div>
+                            </div>
+                            <a href="${produto.link}" target="_blank" rel="noopener noreferrer" class="w-full block text-center bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2.5 px-4 rounded-lg transition duration-150 text-sm shadow-sm">
+                                Comprar
+                            </a>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Erro ao buscar produtos:', error);
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-red-500">Erro ao carregar a vitrine. Verifique se o arquivo JSON existe no repositório.</div>`;
+            }
+        }
+    </script>
+</body>
+</html>

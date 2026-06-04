@@ -1,0 +1,15 @@
+{
+  "name": "trm-hub-showcase",
+  "version": "1.0.0",
+  "description": "Vitrine responsiva e leve para TRM Hub Solutions",
+  "main": "netlify/functions/api.js",
+  "scripts": {
+    "build": "echo 'Pronto para o deploy!'"
+  },
+  "dependencies": {
+    "@octokit/rest": "^20.1.0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
