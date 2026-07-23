@@ -3,7 +3,7 @@ const { Octokit } = require("@octokit/rest");
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 const OWNER = process.env.REPO_OWNER;
 const REPO = process.env.REPO_NAME;
-const PATH = "vitrini/produtos.json"; 
+const PATH = "vitrine/produtos.json"; 
 
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
