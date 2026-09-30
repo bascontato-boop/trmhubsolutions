@@ -1,0 +1,256 @@
+
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Controlo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>.hidden { display: none; }</style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Ecrã de Login -->
+    <div id="login-screen" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-sm">
+            <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Acesso ao Painel</h2>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label for="usuario" class="block text-sm font-medium text-gray-700">Utilizador</label>
+                    <input type="text" id="usuario" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" required>
+                </div>
+                <div>
+                    <label for="senha" class="block text-sm font-medium text-gray-700">Palavra-passe</label>
+                    <input type="password" id="senha" class="mt-1 w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" required>
+                </div>
+                <div id="login-erro" class="hidden text-red-600 text-sm text-center"></div>
+                <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 font-semibold">Entrar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Painel Principal -->
+    <div id="painel-principal" class="hidden">
+        <header class="bg-white shadow-sm">
+            <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+                <h1 id="titulo-painel" class="text-2xl font-bold text-gray-900">Painel de Controlo</h1>
+                <button onclick="fazerLogout()" class="text-sm font-medium text-gray-600 hover:text-red-600">Sair</button>
+            </div>
+        </header>
+        <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div class="lg:col-span-1 bg-white p-6 rounded-lg shadow-md border border-gray-200 h-fit">
+                    <h2 id="form-titulo" class="text-xl font-semibold mb-6">Adicionar Produto</h2>
+                    <form id="produto-form" class="space-y-4">
+                        <input type="hidden" id="produto-id">
+                        <div>
+                            <label for="nome" class="block text-sm font-medium text-gray-700">Nome</label>
+                            <input type="text" id="nome" class="mt-1 w-full p-2 border border-gray-300 rounded-md" required>
+                        </div>
+                        <div>
+                            <label for="preco" class="block text-sm font-medium text-gray-700">Preço (ex: 49.90)</label>
+                            <input type="text" id="preco" class="mt-1 w-full p-2 border border-gray-300 rounded-md" required>
+                        </div>
+                        <div>
+                            <label for="plataforma" class="block text-sm font-medium text-gray-700">Plataforma</label>
+                             <select id="plataforma" class="mt-1 w-full p-2 border border-gray-300 rounded-md" required>
+                                <option value="Shopee">Shopee</option>
+                                <option value="Amazon">Amazon</option>
+                                <option value="Mercado Livre">Mercado Livre</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="link" class="block text-sm font-medium text-gray-700">Link</label>
+                            <input type="url" id="link" class="mt-1 w-full p-2 border border-gray-300 rounded-md" required>
+                        </div>
+                        <div>
+                            <label for="imagem" class="block text-sm font-medium text-gray-700">URL da Imagem</label>
+                            <input type="url" id="imagem" class="mt-1 w-full p-2 border border-gray-300 rounded-md" required>
+                        </div>
+                        <div class="flex items-center gap-3 pt-4">
+                            <button type="submit" id="btn-salvar" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 font-semibold">Guardar</button>
+                            <button type="button" id="btn-cancelar" onclick="cancelarEdicao()" class="hidden w-full bg-gray-200 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-300">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                    <h2 class="text-xl font-semibold mb-6">Produtos Cadastrados</h2>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Produto</th>
+                                    <th class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase">Preço</th>
+                                    <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabela-produtos" class="bg-white divide-y divide-gray-200">
+                                <!-- Linhas preenchidas via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- LÓGICA DINÂMICA ---
+        function obterNichoPeloURL() {
+            const pathParts = window.location.pathname.split('/').filter(part => part);
+            return pathParts.length > 1 ? pathParts[pathParts.length - 2] : 'vitrine';
+        }
+        const NICHO = obterNichoPeloURL();
+        // --- FIM DA LÓGICA DINÂMICA ---
+
+        const TOKEN_KEY = 'trm_token';
+        let produtosExistentes = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            verificarAutenticacao();
+            document.getElementById('login-form').addEventListener('submit', efetuarLogin);
+            document.getElementById('produto-form').addEventListener('submit', salvarProduto);
+        });
+
+        function atualizarTitulosPainel() {
+             const nomeFormatado = NICHO.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+             document.getElementById('titulo-painel').textContent = `Painel: ${nomeFormatado}`;
+             document.title = `Painel: ${nomeFormatado}`;
+        }
+
+        function verificarAutenticacao() {
+            if (sessionStorage.getItem(TOKEN_KEY) === 'trm-authenticated-session-2026') {
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('painel-principal').classList.remove('hidden');
+                atualizarTitulosPainel();
+                listarProdutos();
+            }
+        }
+
+        async function efetuarLogin(e) {
+            e.preventDefault();
+            const erroDiv = document.getElementById('login-erro');
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        usuario: document.getElementById('usuario').value,
+                        senha: document.getElementById('senha').value
+                    })
+                });
+                const data = await response.json();
+                if (response.ok && data.autenticado) {
+                    sessionStorage.setItem(TOKEN_KEY, data.token);
+                    erroDiv.classList.add('hidden');
+                    verificarAutenticacao();
+                } else {
+                    erroDiv.textContent = data.message || 'Credenciais inválidas.';
+                    erroDiv.classList.remove('hidden');
+                }
+            } catch (error) {
+                erroDiv.textContent = 'Erro de conexão com o servidor.';
+                erroDiv.classList.remove('hidden');
+            }
+        }
+
+        function fazerLogout() {
+            sessionStorage.removeItem(TOKEN_KEY);
+            window.location.reload();
+        }
+
+        async function listarProdutos() {
+            const tbody = document.getElementById('tabela-produtos');
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8">A carregar...</td></tr>';
+            try {
+                const response = await fetch(`/api?nicho=${NICHO}`);
+                produtosExistentes = await response.json();
+                if (!produtosExistentes || produtosExistentes.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-gray-500">Nenhum produto cadastrado.</td></tr>';
+                    return;
+                }
+                tbody.innerHTML = produtosExistentes.map(p => `
+                    <tr>
+                        <td class="px-4 py-3 flex items-center gap-3">
+                            <img src="${p.imagem}" class="w-10 h-10 object-cover rounded border">
+                            <span class="font-medium text-gray-800">${p.nome}</span>
+                        </td>
+                        <td class="px-4 py-3 font-semibold">R$ ${parseFloat(p.preco).toFixed(2)}</td>
+                        <td class="px-4 py-3 text-right space-x-2">
+                            <button onclick="prepararEdicao('${p.id}')" class="text-indigo-600 hover:text-indigo-800 font-medium text-xs">Editar</button>
+                            <button onclick="deletarProduto('${p.id}')" class="text-red-600 hover:text-red-800 font-medium text-xs">Apagar</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                tbody.innerHTML = '<tr><td colspan="3" class="text-center py-8 text-red-600">Erro ao carregar dados.</td></tr>';
+            }
+        }
+
+        async function salvarProduto(e) {
+            e.preventDefault();
+            const id = document.getElementById('produto-id').value;
+            const token = sessionStorage.getItem(TOKEN_KEY);
+            const dados = {
+                nome: document.getElementById('nome').value,
+                preco: document.getElementById('preco').value,
+                plataforma: document.getElementById('plataforma').value,
+                link: document.getElementById('link').value,
+                imagem: document.getElementById('imagem').value
+            };
+
+            const url = id ? `/api/${id}?nicho=${NICHO}` : `/api?nicho=${NICHO}`;
+            const method = id ? 'PUT' : 'POST';
+
+            try {
+                const response = await fetch(url, {
+                    method,
+                    headers: { 'Content-Type': 'application/json', 'Authorization': token },
+                    body: JSON.stringify(dados)
+                });
+                if (response.ok) {
+                    cancelarEdicao();
+                    await listarProdutos();
+                } else {
+                    alert('Erro ao guardar o produto.');
+                }
+            } catch (error) {
+                alert('Erro de conexão ao guardar.');
+            }
+        }
+
+        function prepararEdicao(id) {
+            const p = produtosExistentes.find(prod => prod.id === id);
+            if (!p) return;
+            document.getElementById('produto-id').value = p.id;
+            document.getElementById('nome').value = p.nome;
+            document.getElementById('preco').value = p.preco;
+            document.getElementById('plataforma').value = p.plataforma;
+            document.getElementById('link').value = p.link;
+            document.getElementById('imagem').value = p.imagem;
+            document.getElementById('form-titulo').innerText = "Editar Produto";
+            document.getElementById('btn-salvar').innerText = "Atualizar";
+            document.getElementById('btn-cancelar').classList.remove('hidden');
+        }
+
+        function cancelarEdicao() {
+            document.getElementById('produto-form').reset();
+            document.getElementById('produto-id').value = '';
+            document.getElementById('form-titulo').innerText = "Adicionar Produto";
+            document.getElementById('btn-salvar').innerText = "Guardar";
+            document.getElementById('btn-cancelar').classList.add('hidden');
+        }
+
+        async function deletarProduto(id) {
+            if (!confirm('Tem a certeza que deseja apagar este produto?')) return;
+            const token = sessionStorage.getItem(TOKEN_KEY);
+            try {
+                const response = await fetch(`/api/${id}?nicho=${NICHO}`, { method: 'DELETE', headers: { 'Authorization': token } });
+                if (response.ok) await listarProdutos();
+            } catch (error) {
+                alert('Erro ao apagar o produto.');
+            }
+        }
+    </script>
+</body>
+</html>
