@@ -1,4 +1,24 @@
+# Configurações de Build
 [build]
+  # Comando para instalar as dependências da função (ex: @octokit/rest)
+  command = "npm install"
+  
+  # O diretório a publicar (raiz, onde estão as pastas das vitrines)
+  publish = "."
+  
+  # O diretório onde as Netlify Functions estão (na raiz do projeto)
+  functions = "functions"
+
+# Regras de Redirecionamento para a API
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/api"
+  to = "/.netlify/functions/api"
+  status = 200[build]
   publish = "."
   functions = "vitrine/functions"
 
