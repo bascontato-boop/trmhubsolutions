@@ -10,7 +10,6 @@
 </head>
 <body class="bg-gray-100">
 
-    <!-- Ecrã de Login -->
     <div id="login-screen" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
         <div class="bg-white rounded-lg shadow-xl p-8 w-full max-w-sm">
             <h2 class="text-2xl font-bold text-center text-gray-800 mb-6">Acesso ao Painel</h2>
@@ -29,7 +28,6 @@
         </div>
     </div>
 
-    <!-- Painel Principal -->
     <div id="painel-principal" class="hidden">
         <header class="bg-white shadow-sm">
             <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
@@ -84,9 +82,7 @@
                                     <th class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase">Ações</th>
                                 </tr>
                             </thead>
-                            <tbody id="tabela-produtos" class="bg-white divide-y divide-gray-200">
-                                <!-- Linhas preenchidas via JS -->
-                            </tbody>
+                            <tbody id="tabela-produtos" class="bg-white divide-y divide-gray-200"></tbody>
                         </table>
                     </div>
                 </div>
@@ -95,10 +91,12 @@
     </div>
 
     <script>
-        // --- LÓGICA DINÂMICA ---
+        // --- LÓGICA DINÂMICA ATUALIZADA ---
         function obterNichoPeloURL() {
-            const pathParts = window.location.pathname.split('/').filter(part => part);
-            return pathParts.length > 1 ? pathParts[pathParts.length - 2] : 'vitrine';
+            // Ex: /produtos/vitrine_cestos/cadastro.html
+            const pathParts = window.location.pathname.split('/').filter(part => part && part !== 'cadastro.html');
+            // Junta as partes relevantes para formar o caminho: "produtos/vitrine_cestos"
+            return pathParts.join('/');
         }
         const NICHO = obterNichoPeloURL();
         // --- FIM DA LÓGICA DINÂMICA ---
@@ -113,7 +111,9 @@
         });
 
         function atualizarTitulosPainel() {
-             const nomeFormatado = NICHO.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+             const partesDoNicho = NICHO.split('/');
+             const nomeFinal = partesDoNicho[partesDoNicho.length - 1];
+             const nomeFormatado = nomeFinal.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
              document.getElementById('titulo-painel').textContent = `Painel: ${nomeFormatado}`;
              document.title = `Painel: ${nomeFormatado}`;
         }
@@ -198,10 +198,8 @@
                 link: document.getElementById('link').value,
                 imagem: document.getElementById('imagem').value
             };
-
             const url = id ? `/api/${id}?nicho=${NICHO}` : `/api?nicho=${NICHO}`;
             const method = id ? 'PUT' : 'POST';
-
             try {
                 const response = await fetch(url, {
                     method,
@@ -211,12 +209,8 @@
                 if (response.ok) {
                     cancelarEdicao();
                     await listarProdutos();
-                } else {
-                    alert('Erro ao guardar o produto.');
-                }
-            } catch (error) {
-                alert('Erro de conexão ao guardar.');
-            }
+                } else { alert('Erro ao guardar o produto.'); }
+            } catch (error) { alert('Erro de conexão ao guardar.'); }
         }
 
         function prepararEdicao(id) {
@@ -247,9 +241,7 @@
             try {
                 const response = await fetch(`/api/${id}?nicho=${NICHO}`, { method: 'DELETE', headers: { 'Authorization': token } });
                 if (response.ok) await listarProdutos();
-            } catch (error) {
-                alert('Erro ao apagar o produto.');
-            }
+            } catch (error) { alert('Erro ao apagar o produto.'); }
         }
     </script>
 </body>
