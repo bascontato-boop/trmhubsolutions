@@ -1,46 +1,35 @@
-// Versão 1.1
+
 const { Octokit } = require("@octokit/rest");
 
+// Configuração do Octokit e das variáveis de ambiente
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
 const OWNER = process.env.REPO_OWNER;
 const REPO = process.env.REPO_NAME;
-
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
 
-// --- FUNÇÃO CORRIGIDA ---
-// Aceita caminhos como "produtos/vitrine_cestos" de forma segura.
+// Função de segurança para validar o caminho do nicho
 function getProdutosPath(nicho) {
-    // Medida de segurança atualizada:
-    // 1. Garante que o nicho existe.
-    // 2. Permite letras, números, underscores e UMA barra (ex: produtos/vitrine_cestos).
-    // 3. Proíbe ".." para evitar ataques de path traversal.
-    if (!nicho || nicho.includes('..') || !/^[a-z0-9_]+\/[a-z0-9_]+$/i.test(nicho)) {
-        // Se o formato for simples (sem barra), assume que está na raiz (mantém compatibilidade)
-        if (nicho && /^[a-z0-9_]+$/i.test(nicho)) {
-            return `${nicho}/produtos.json`;
-        }
-        throw new Error("Formato de nicho inválido. Esperado 'pasta/subpasta' ou 'pasta'.");
+    // Validação rigorosa:
+    // 1. Garante que o nicho não é vazio.
+    // 2. Proíbe ".." para evitar ataques de "path traversal".
+    // 3. Permite o formato "pasta" ou "pasta/subpasta" com caracteres seguros.
+    if (!nicho || nicho.includes('..') || !/^[a-z0-9_]+(\/[a-z0-9_]+)*$/i.test(nicho)) {
+        throw new Error("Formato de nicho inválido.");
     }
     return `${nicho}/produtos.json`;
 }
-// --- FIM DA CORREÇÃO ---
 
 async function obterProdutos(path) {
     try {
         const { data } = await octokit.repos.getContent({ owner: OWNER, repo: REPO, path });
         const content = Buffer.from(data.content, 'base64').toString('utf-8').trim();
-        
-        if (!content || content === "") {
-            return { produtos: [], sha: data.sha };
-        }
-        
-        return { produtos: JSON.parse(content), sha: data.sha };
+        return { produtos: content ? JSON.parse(content) : [], sha: data.sha };
     } catch (error) {
         if (error.status === 404) {
-            return { produtos: [], sha: null };
+            return { produtos: [], sha: null }; // Ficheiro não existe, retorna estado inicial
         }
-        throw error;
+        throw error; // Propaga outros erros
     }
 }
 
@@ -50,13 +39,13 @@ async function salvarProdutos(produtos, sha, path) {
         owner: OWNER,
         repo: REPO,
         path,
-        message: `🔄 Atualização da vitrine [${path}]`,
+        message: `[API] Atualiza produtos para: ${path}`,
         content,
         sha: sha || undefined
     });
 }
 
-exports.handler = async (event, context) => {
+exports.handler = async (event) => {
     const headers = {
         "Content-Type": "application/json",
         "Access-Control-Allow-Origin": "*",
@@ -65,38 +54,38 @@ exports.handler = async (event, context) => {
     };
 
     if (event.httpMethod === "OPTIONS") {
-        return { statusCode: 200, headers, body: "" };
+        return { statusCode: 204, headers };
     }
 
     try {
-        const nicho = event.queryStringParameters?.nicho;
-        if (!nicho) {
-             return { statusCode: 400, headers, body: JSON.stringify({ message: "Parâmetro 'nicho' é obrigatório." }) };
-        }
-        const path = getProdutosPath(nicho);
-
         const pathSegments = event.path.replace(/^\/api\/?/, '').split('/');
         const endpoint = pathSegments[0] || null;
         const method = event.httpMethod;
 
+        // Rota de Login (não precisa de nicho nem token)
         if (endpoint === "login" && method === "POST") {
             const { usuario, senha } = JSON.parse(event.body);
-            if (ADMIN_USER && ADMIN_PASS && usuario === ADMIN_USER && senha === ADMIN_PASS) {
-                return { 
-                    statusCode: 200, 
-                    headers, 
-                    body: JSON.stringify({ autenticado: true, token: "trm-authenticated-session-2026" }) 
-                };
+            if (usuario === ADMIN_USER && senha === ADMIN_PASS) {
+                return { statusCode: 200, headers, body: JSON.stringify({ autenticado: true, token: "trm-authenticated-session-2026" }) };
             }
-            return { statusCode: 401, headers, body: JSON.stringify({ message: "Incorreto." }) };
+            return { statusCode: 401, headers, body: JSON.stringify({ message: "Credenciais inválidas." }) };
         }
 
+        // --- VALIDAÇÃO CENTRAL ---
+        // A partir daqui, todas as rotas precisam de um 'nicho'
+        const nicho = event.queryStringParameters?.nicho;
+        if (!nicho) {
+            return { statusCode: 400, headers, body: JSON.stringify({ message: "Parâmetro 'nicho' é obrigatório." }) };
+        }
+        const path = getProdutosPath(nicho);
+
+        // A partir daqui, todas as rotas (exceto GET) precisam de um token
         if (method !== "GET") {
-            const authHeader = event.headers.authorization;
-            if (authHeader !== "trm-authenticated-session-2026") {
+            if (event.headers.authorization !== "trm-authenticated-session-2026") {
                 return { statusCode: 403, headers, body: JSON.stringify({ message: "Não autorizado." }) };
             }
         }
+        // --- FIM DA VALIDAÇÃO ---
 
         const { produtos, sha } = await obterProdutos(path);
 
@@ -105,36 +94,35 @@ exports.handler = async (event, context) => {
         }
 
         if (method === "POST") {
-            const novo = JSON.parse(event.body);
-            novo.id = Date.now().toString();
+            const novo = { ...JSON.parse(event.body), id: Date.now().toString() };
             produtos.push(novo);
             await salvarProdutos(produtos, sha, path);
-            return { statusCode: 201, headers, body: JSON.stringify({ message: "Cadastrado!", produto: novo }) };
+            return { statusCode: 201, headers, body: JSON.stringify(novo) };
         }
 
-        if (method === "PUT" && endpoint) {
-            const atualizado = JSON.parse(event.body);
-            const index = produtos.findIndex(p => p.id === endpoint);
-            if (index === -1) return { statusCode: 404, headers, body: JSON.stringify({ message: "Não encontrado" }) };
-            
-            produtos[index] = { ...produtos[index], ...atualizado };
+        const idProduto = endpoint;
+        const index = produtos.findIndex(p => p.id === idProduto);
+
+        if (index === -1) {
+            return { statusCode: 404, headers, body: JSON.stringify({ message: "Produto não encontrado." }) };
+        }
+
+        if (method === "PUT") {
+            produtos[index] = { ...produtos[index], ...JSON.parse(event.body) };
             await salvarProdutos(produtos, sha, path);
-            return { statusCode: 200, headers, body: JSON.stringify({ message: "Atualizado!" }) };
+            return { statusCode: 200, headers, body: JSON.stringify(produtos[index]) };
         }
 
-        if (method === "DELETE" && endpoint) {
-            const filtrados = produtos.filter(p => p.id !== endpoint);
+        if (method === "DELETE") {
+            const filtrados = produtos.filter(p => p.id !== idProduto);
             await salvarProdutos(filtrados, sha, path);
-            return { statusCode: 200, headers, body: JSON.stringify({ message: "Removido!" }) };
+            return { statusCode: 200, headers, body: JSON.stringify({ message: "Produto removido." }) };
         }
 
-        return { statusCode: 405, headers, body: JSON.stringify({ message: "Método inválido" }) };
+        return { statusCode: 405, headers, body: JSON.stringify({ message: "Método não permitido." }) };
 
     } catch (err) {
-        return { 
-            statusCode: 500, 
-            headers, 
-            body: JSON.stringify({ error: "Erro interno", detalhes: err.message }) 
-        };
+        console.error("Erro na API:", err);
+        return { statusCode: 500, headers, body: JSON.stringify({ message: "Erro interno no servidor.", error: err.message }) };
     }
 };
