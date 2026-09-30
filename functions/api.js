@@ -1,3 +1,4 @@
+
 const { Octokit } = require("@octokit/rest");
 
 const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
@@ -7,15 +8,23 @@ const REPO = process.env.REPO_NAME;
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
 
-// Função para obter o caminho dinâmico do arquivo de produtos
-function getProdutosPath(vitrineId) {
-    // Medida de segurança: garante que o ID contém apenas caracteres seguros
-    // e evita ataques de "path traversal" (ex: ../../etc/passwd)
-    if (!vitrineId || !/^[a-z0-9_]+$/i.test(vitrineId)) {
-        throw new Error("ID de vitrine inválido.");
+// --- FUNÇÃO CORRIGIDA ---
+// Aceita caminhos como "produtos/vitrine_cestos" de forma segura.
+function getProdutosPath(nicho) {
+    // Medida de segurança atualizada:
+    // 1. Garante que o nicho existe.
+    // 2. Permite letras, números, underscores e UMA barra (ex: produtos/vitrine_cestos).
+    // 3. Proíbe ".." para evitar ataques de path traversal.
+    if (!nicho || nicho.includes('..') || !/^[a-z0-9_]+\/[a-z0-9_]+$/i.test(nicho)) {
+        // Se o formato for simples (sem barra), assume que está na raiz (mantém compatibilidade)
+        if (nicho && /^[a-z0-9_]+$/i.test(nicho)) {
+            return `${nicho}/produtos.json`;
+        }
+        throw new Error("Formato de nicho inválido. Esperado 'pasta/subpasta' ou 'pasta'.");
     }
-    return `${vitrineId}/produtos.json`;
+    return `${nicho}/produtos.json`;
 }
+// --- FIM DA CORREÇÃO ---
 
 async function obterProdutos(path) {
     try {
@@ -29,10 +38,8 @@ async function obterProdutos(path) {
         return { produtos: JSON.parse(content), sha: data.sha };
     } catch (error) {
         if (error.status === 404) {
-            // Se o arquivo não existe, retorna um estado inicial válido para criação
             return { produtos: [], sha: null };
         }
-        // Se for outro erro, propaga
         throw error;
     }
 }
@@ -43,7 +50,7 @@ async function salvarProdutos(produtos, sha, path) {
         owner: OWNER,
         repo: REPO,
         path,
-        message: `🔄 Atualização dinâmica da vitrine [${path}]`,
+        message: `🔄 Atualização da vitrine [${path}]`,
         content,
         sha: sha || undefined
     });
@@ -62,9 +69,11 @@ exports.handler = async (event, context) => {
     }
 
     try {
-        // Pega o ID da vitrine da query string, com 'vitrine' como padrão
-        const vitrineId = event.queryStringParameters?.vitrine || 'vitrine';
-        const path = getProdutosPath(vitrineId);
+        const nicho = event.queryStringParameters?.nicho;
+        if (!nicho) {
+             return { statusCode: 400, headers, body: JSON.stringify({ message: "Parâmetro 'nicho' é obrigatório." }) };
+        }
+        const path = getProdutosPath(nicho);
 
         const pathSegments = event.path.replace(/^\/api\/?/, '').split('/');
         const endpoint = pathSegments[0] || null;
